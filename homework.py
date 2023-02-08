@@ -3,9 +3,10 @@ import sys
 import time
 import logging
 import requests
+import telegram
 
 from dotenv import load_dotenv
-from telegram import Bot
+# from telegram import Bot
 from telegram.error import TelegramError
 
 from exeptions import EndpointNotAvailable, HomeworkNotFound, NoHomeworkName,\
@@ -43,7 +44,7 @@ def check_tokens(bot):
     env = ('PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID')
     try:
         for i in env:
-            if i not in globals():
+            if not eval(i):
                 raise MissingEnvironmentVariable(i)
     except MissingEnvironmentVariable as e:
         logger.critical(e)
@@ -101,7 +102,7 @@ def main():
     last_error_message = ''
     # status = ('Последний статус: ', 'Статус изменился: ')[bool(last_message)]
 
-    bot = Bot(token=TELEGRAM_TOKEN)
+    bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time()) - 1673332499  # 10.01.2023
 
     check_tokens(bot)
