@@ -6,13 +6,13 @@ ENV LC_ALL ru_RU.UTF-8
 ENV PYTHONUNBUFFERED 1
 
 RUN mkdir /app
-
 WORKDIR /app
 
-COPY requirements.txt ./
+#COPY requirements.txt ./
+COPY . ./
 RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-CMD ["sh"]
+#CMD ["sh"]
 
-#CMD [ "python", "homework.py" ]
+CMD [ "python", "homework.py" ]

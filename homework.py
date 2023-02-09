@@ -6,11 +6,10 @@ import requests
 import telegram
 
 from dotenv import load_dotenv
-# from telegram import Bot
 from telegram.error import TelegramError
 
 from exeptions import EndpointNotAvailable, HomeworkNotFound, NoHomeworkName,\
-    UnknownHomeworkStatus, MissingEnvironmentVariable
+    UnknownHomeworkStatus
 
 
 load_dotenv()
@@ -39,22 +38,14 @@ HOMEWORK_VERDICTS = {
 }
 
 
-def check_tokens(bot):
-    """Если нет обязательных переменных окружения вызывает исключение."""
-    env = ('PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID')
-    try:
-        for i in env:
-            if not eval(i):
-                raise MissingEnvironmentVariable(i)
-    except MissingEnvironmentVariable as e:
-        logger.critical(e)
-        if TELEGRAM_TOKEN and TELEGRAM_CHAT_ID:
-            send_message(bot, str(e))
-        raise
+def check_tokens():
+    """Проверка обязательных переменных окружения."""
+    return all((PRACTICUM_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_TOKEN))
 
 
 def send_message(bot, message):
     """Отправляет сообщение в телеграм."""
+    logger.debug('Отправка сообщения')
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.debug(f'Бот отправил сообщение "{message}"')
@@ -64,6 +55,7 @@ def send_message(bot, message):
 
 def get_api_answer(timestamp):
     """Возвращает json, если доступен."""
+    logger.debug('Получение ответа с сервера')
     try:
         params = {'from_date': timestamp}
         res = requests.get(ENDPOINT, headers=HEADERS, params=params)
@@ -71,21 +63,27 @@ def get_api_answer(timestamp):
             raise EndpointNotAvailable(ENDPOINT, res)
         return res.json()
     except requests.RequestException:
-        logging.error('No response')
+        logger.error('No response')
 
 
-def check_response(response):
-    """На входе json."""
+def check_response(response: dict):
+    """Проверка корректности ответа."""
+    logger.debug('Проверка ответа')
     if not isinstance(response, dict):
         raise TypeError
+    # С моржом проверки не проходят при отправке. Версия питона 3.7
+    missed_keys = {'homeworks', 'current_date'}
+    if missed_keys - response.keys():
+        logger.error(f'В ответе API нет ожидаемых ключей: {missed_keys}')
     if not isinstance(response.get('homeworks'), list):
         raise TypeError
-    if not response.get('homeworks'):
+    if not response.get('homeworks'):  # Проверка, что список не пустой.
         raise HomeworkNotFound
 
 
 def parse_status(homework):
     """На входе json последней работы, формирует строку сообщения."""
+    logger.debug('формирование строки сообщения')
     status = homework.get('status')
     if status not in HOMEWORK_VERDICTS:
         raise UnknownHomeworkStatus
@@ -100,12 +98,13 @@ def main():
     """Основная логика работы бота."""
     last_message = ''
     last_error_message = ''
-    # status = ('Последний статус: ', 'Статус изменился: ')[bool(last_message)]
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time()) - 1673332499  # 10.01.2023
 
-    check_tokens(bot)
+    if not check_tokens():
+        logger.critical('Отсутствует обязательная переменная окружения')
+        sys.exit('Принудительное завершение')
 
     while True:
         try:

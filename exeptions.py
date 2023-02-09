@@ -16,13 +16,6 @@ class EndpointNotAvailable(CustumException):
         super().__init__(message)
 
 
-class MissingEnvironmentVariable(CustumException):
-    def __init__(self, value):
-        super().__init__(
-            f'Отсутствует обязательная переменная окружения: "{value}". '
-            f'Программа принудительно остановлена.')
-
-
 class HomeworkNotFound(CustumException):
     def __init__(self):
         super().__init__('Нет домашки. Может timestamp увеличить?')
